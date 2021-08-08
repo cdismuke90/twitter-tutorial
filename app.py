@@ -12,7 +12,7 @@ from flask_bootstrap import Bootstrap
 
 from json import loads
 
-import logging, urllib3, urllib, urlparse
+import logging, urllib3, urllib, urllib.parse
 import oauth2, hmac
 
 from base64 import b64encode
@@ -26,7 +26,7 @@ from random import random
 from time import time
 
 app = Flask(__name__)
-app.secret_key = "Secret key"
+app.secret_key = "My secret key"
 Bootstrap(app)
 
 APP_TOKEN = {}
@@ -34,8 +34,8 @@ APP_TOKEN = {}
 AUTHORIZATION_CODE_ENDPOINT='EXAMPLE'
 MANAGER = urllib3.PoolManager()
 
-CONSUMER_KEY='YOUR CONSUMER KEY'
-CONSUMER_SECRET='YOUR CONSUMER SECRET'
+CONSUMER_KEY='consumerkey'
+CONSUMER_SECRET='consumersecret'
 CONSUMER = oauth2.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
 
 REQUEST_TOKEN={}
@@ -74,7 +74,7 @@ def get_request_token():
     resp, content = oauth2.Client(CONSUMER).request('https://api.twitter.com/oauth/request_token', "GET")
 
     if resp['status'] != '200':
-        print content
+        print(content)
         raise Exception("Invalid response %s." % resp['status'])
 
     REQUEST_TOKEN = dict(urlparse.parse_qsl(content))
@@ -82,10 +82,11 @@ def get_request_token():
 
 def get_app_token():
     try:
+        auth_bytes = ("%s:%s" % (CONSUMER_KEY,CONSUMER_SECRET)).encode("utf-8")
         app_token = MANAGER.urlopen('POST',
                                     'https://api.twitter.com/oauth2/token',
                                     headers={
-                                        'Authorization': "Basic %s" % b64encode("%s:%s" % (CONSUMER_KEY,CONSUMER_SECRET)),
+                                        'Authorization': "Basic %s" % b64encode(auth_bytes),
                                         'Content-Type': 'application/x-www-form-urlencoded',
                                     },
                                     body="grant_type=client_credentials")
@@ -141,9 +142,10 @@ def handle_callback():
     return redirect("/")
 
 if __name__ == "__main__":
+    
     try:
         APP_TOKEN = get_app_token()
         APP_TOKEN['access_token']
     except: raise
-
+    
     app.run(port=8002, debug=True)
